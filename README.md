@@ -17,7 +17,7 @@ FROM node:18
 WORKDIR /app
 
 # Clone the repository (using a multi-stage build to avoid unnecessary files)
-RUN git clone https://github.com/jdkdev/screen.git
+RUN git clone https://github.com/jdkdev/screen.git .
 
 # Install dependencies
 RUN npm install
