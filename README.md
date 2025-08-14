@@ -9,25 +9,26 @@ This template should help get you started developing with Tauri and SvelteKit in
 
 ## Caprover Deployment
 
-FROM node:18
+# Use an official Node.js runtime as a parent image
+FROM node:22
 
+# Set the working directory in the container
 WORKDIR /app
 
+# Clone the repository
 RUN git clone https://github.com/jdkdev/screen.git
 
+# Change to the cloned directory
 WORKDIR /app/screen
 
+# Install dependencies
 RUN npm install
 
+# Build App
 RUN npm run build
 
-# Debug: Show what npm start would run
-RUN npm run start --dry-run || echo "npm start failed"
-
-# Debug: Show package.json scripts
-RUN cat package.json | grep -A 10 '"scripts"'
-
+# Expose port 3000
 EXPOSE 3000
 
-# Try alternative starts
-CMD ["sh", "-c", "cat package.json && npm start"]
+# Start the application
+CMD ["npm", "start"]
