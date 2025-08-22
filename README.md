@@ -7,6 +7,8 @@ This template should help get you started developing with Tauri and SvelteKit in
 [VS Code](https://code.visualstudio.com/) + [Svelte](https://marketplace.visualstudio.com/items?itemName=svelte.svelte-vscode) + [Tauri](https://marketplace.visualstudio.com/items?itemName=tauri-apps.tauri-vscode) + [rust-analyzer](https://marketplace.visualstudio.com/items?itemName=rust-lang.rust-analyzer).
 
 
+wired up to github
+
 ## Caprover Deployment
 
 # Use an official Node.js runtime as a parent image
