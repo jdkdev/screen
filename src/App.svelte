@@ -1,5 +1,6 @@
 <script>
   import { onMount } from 'svelte'
+  import { fixWebmDuration } from "@fix-webm-duration/fix"
 
   let stream = null
   let audio = null
@@ -18,6 +19,7 @@
   let uploadProgress = 0
   let recordedBlob = null
   let showUploadOption = false
+  let startTime = undefined
 
   // Cloudinary config - Replace these with your actual values
   const CLOUDINARY_CLOUD_NAME = 'knightworks'
@@ -64,6 +66,7 @@
       recorder.ondataavailable = handleDataAvailable
       recorder.onstop = handleStop
       recorder.start(1000)
+      startTime = Date.now() + 1000
 
       startButton.disabled = true
       stopButton.disabled = false
@@ -122,7 +125,10 @@
   async function handleStop(e) {
     const blob = new Blob(chunks, { type: 'video/mp4' })
     chunks = []
-    recordedBlob = blob // Store for potential upload
+    const duration = Date.now - startTime
+    // const buggyBlob = blob
+    recordedBlob = await fixWebmDuration(blob, duration)
+
 
     downloadButton.href = URL.createObjectURL(blob)
     downloadButton.download = `screen-recording-${Date.now()}.mp4`
