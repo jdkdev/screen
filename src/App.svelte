@@ -1,6 +1,14 @@
 <script>
   import { onMount } from 'svelte'
   import { fixWebmDuration } from "@fix-webm-duration/fix"
+  // import {FFmpeg} from '@ffmpeg/ffmpeg'
+  // import { toBlobURL, fetchFile } from '@ffmpeg/util'
+  // import { encode } from 'modern-gif'
+  // import the workerUrl through Vite
+  // import workerUrl from 'modern-gif/worker?url'
+
+
+  // let ffmpeg = new FFmpeg()
 
   let stream = null
   let audio = null
@@ -62,10 +70,19 @@
 
     if (stream && audio) {
       mixedStream = new MediaStream([...stream.getTracks(), ...audio.getTracks()])
-      recorder = new MediaRecorder(mixedStream)
+
+      const options = {}
+
+      // if (MediaRecorder.isTypeSupported('video/webm;codecs=vp9')) {
+      //   options.mimeType = 'video/webm;codecs=vp9'
+      // } else if (MediaRecorder.isTypeSupported('video/webm;codecs=vp8')) {
+      //   options.mimeType = 'video/webm;codecs=vp8'
+      // }
+
+      recorder = new MediaRecorder(mixedStream, options)
       recorder.ondataavailable = handleDataAvailable
       recorder.onstop = handleStop
-      recorder.start(1000)
+      recorder.start(200)
       startTime = Date.now() + 1000
 
       startButton.disabled = true
@@ -123,15 +140,15 @@
   }
 
   async function handleStop(e) {
-    const blob = new Blob(chunks, { type: 'video/mp4' })
+    const blob = new Blob(chunks, { type: 'video/webm' })
     chunks = []
-    const duration = Date.now - startTime
+    const duration = Date.now() - startTime
     // const buggyBlob = blob
     recordedBlob = await fixWebmDuration(blob, duration)
 
 
     downloadButton.href = URL.createObjectURL(blob)
-    downloadButton.download = `screen-recording-${Date.now()}.mp4`
+    downloadButton.download = `screen-recording-${Date.now()}.webm`
     downloadButton.disabled = false
 
     recordedVideo.src = URL.createObjectURL(blob)
@@ -148,6 +165,12 @@
     if (CLOUDINARY_CLOUD_NAME !== 'your_cloud_name' && CLOUDINARY_UPLOAD_PRESET !== 'your_upload_preset') {
       showUploadOption = true
     }
+    stream.getVideoTracks()[0].onended = () => {
+      if (recorder && recorder.state === 'recording') {
+        stopRecording()
+      }
+    }
+
 
     stream.getTracks().forEach((track) => track.stop())
     audio.getTracks().forEach((track) => track.stop())
@@ -155,14 +178,7 @@
     console.log('Recording stopped')
   }
 
-  async function uploadVideo() {
-    if (recordedBlob) {
-      const uploadedUrl = await uploadToCloudinary(recordedBlob)
-      if (uploadedUrl) {
-        shareUrl = uploadedUrl
-        showUploadOption = false // Hide the upload button after successful upload
-      }
-    }
+  async function copyToClipboard(shareUrl) {
     try {
       await navigator.clipboard.writeText(shareUrl)
       alert('Share link copied to clipboard!')
@@ -176,6 +192,17 @@
       document.execCommand('copy')
       document.body.removeChild(textArea)
       alert('Share link copied to clipboard!')
+    }
+}
+
+  async function uploadVideo() {
+    if (recordedBlob) {
+      const uploadedUrl = await uploadToCloudinary(recordedBlob)
+      if (uploadedUrl) {
+        shareUrl = uploadedUrl.replace('https://res.cloudinary.com/knightworks/video/upload/', 'https://videos.frontierjs.com/')
+        showUploadOption = false // Hide the upload button after successful upload
+        copyToClipboard(shareUrl)
+      }
     }
   }
 
@@ -193,6 +220,52 @@
       downloadButton.click()
     }
   }
+
+  // async function xconvertToGif() {
+  //   if (!recordedBlob) return
+
+  //   if (!ffmpeg.loaded) {
+  //     // Load from CDN to avoid bundling issues
+  //     const baseURL = 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/esm'
+  //     await ffmpeg.load({
+  //       coreURL: await toBlobURL(`${baseURL}/ffmpeg-core.js`, 'text/javascript'),
+  //       wasmURL: await toBlobURL(`${baseURL}/ffmpeg-core.wasm`, 'application/wasm'),
+  //     })
+  //   }
+
+  //   await ffmpeg.writeFile('input.webm', await fetchFile(recordedBlob))
+
+  //   await ffmpeg.exec([
+  //     '-i', 'input.webm',
+  //     '-vf', 'fps=12,scale=600:-1:flags=lanczos,split[s0][s1];[s0]palettegen[p];[s1][p]paletteuse',
+  //     'output.gif'
+  //   ])
+
+  //   const data = await ffmpeg.readFile('output.gif')
+  //   const gifBlob = new Blob([data.buffer], { type: 'image/gif' })
+
+  //   const a = document.createElement('a')
+  //   a.href = URL.createObjectURL(gifBlob)
+  //   a.download = `recording-${Date.now()}.gif`
+  //   a.click()
+  // }
+
+  // async function convertToGif() {
+  //   const output = await encode({
+  //     // workerUrl is optional
+  //     workerUrl,
+  //     width: 200,
+  //     height: 200,
+  //     frames: [
+  //     // CanvasImageSource | BufferSource | string
+  //     { data: '/example1.png', delay: 100 },
+  //     { data: '/example2.png', delay: 100 }
+  //   ],
+  //   })
+
+  //   const blob = new Blob([output], { type: 'image/gif' })
+  //   window.open(URL.createObjectURL(blob))
+  // }
 </script>
 
 <svelte:window on:keydown={handleKeydown} />
@@ -241,6 +314,7 @@
       <h2 class="text-xl text-gray-500 uppercase font-light mb-4">Recorded video</h2>
 
       <div class="flex flex-wrap -mx-4 mb-4">
+        <!-- <button type="button" on:click={convertToGif}>convertToGif</button> -->
         <a
           bind:this={downloadButton}
           class="download-video text-center mx-4 flex-1 bg-gradient-to-br from-green-500 to-blue-500 text-white p-4 uppercase text-lg font-bold transition-all duration-300 hover:opacity-90 disabled:opacity-50 rounded"
@@ -280,7 +354,7 @@
               class="flex-1 p-2 border rounded bg-white text-gray-800"
             >
             <button
-              on:click={copyToClipboard}
+              on:click={() => copyToClipboard(shareUrl)}
               class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded transition-colors">
               Copy Link
             </button>
