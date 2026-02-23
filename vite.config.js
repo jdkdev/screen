@@ -9,12 +9,19 @@ export default defineConfig({
     port: 8001,
     hmr: {
       overlay: true
+    },
+    headers: {
+      'Cross-Origin-Opener-Policy': 'same-origin',
+      'Cross-Origin-Embedder-Policy': 'require-corp'
     }
   },
   plugins: [
-  UnoCSS({
-        configFile: './uno.config.ts',
-      }),
+    UnoCSS({
+      configFile: './uno.config.ts'
+    }),
     svelte()
-  ]
+  ],
+  optimizeDeps: {
+    exclude: ['@ffmpeg/ffmpeg', '@ffmpeg/util']
+  }
 })
